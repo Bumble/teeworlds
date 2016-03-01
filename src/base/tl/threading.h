@@ -42,7 +42,7 @@
 	{
 		return _InterlockedIncrement((volatile long *)pValue);
 	}
-	
+
 	inline unsigned atomic_dec(volatile unsigned *pValue)
 	{
 		return _InterlockedDecrement((volatile long *)pValue);
@@ -84,7 +84,7 @@ class lock
 	LOCK var;
 
 	void take() { lock_wait(var); }
-	void release() { lock_release(var); }
+	void release() { lock_unlock(var); }
 
 public:
 	lock()

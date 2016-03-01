@@ -25,18 +25,18 @@ CFileScore::CFileScore(CGameContext *pGameServer) : m_pGameServer(pGameServer), 
 {
 	if(gs_ScoreLock == 0)
 		gs_ScoreLock = lock_create();
-		
+
 	Init();
 }
 
 CFileScore::~CFileScore()
 {
 	lock_wait(gs_ScoreLock);
-	
+
 	// clear list
 	m_Top.clear();
-	
-	lock_release(gs_ScoreLock);
+
+	lock_unlock(gs_ScoreLock);
 }
 
 void CFileScore::WriteLine(IOHANDLE File, const char *pLine)
@@ -82,12 +82,12 @@ void CFileScore::SaveScoreThread(void *pUser)
 		}
 		io_close(File);
 	}
-	lock_release(gs_ScoreLock);
+	lock_unlock(gs_ScoreLock);
 }
 
 void CFileScore::Save()
 {
-	void *pSaveThread = thread_create(SaveScoreThread, this);
+	void *pSaveThread = thread_init(SaveScoreThread, this);
 	thread_detach(pSaveThread);
 }
 
@@ -138,7 +138,7 @@ void CFileScore::Init()
 		}
 		io_close(File);
 	}
-	lock_release(gs_ScoreLock);
+	lock_unlock(gs_ScoreLock);
 
 	// save the current best score
 	if(m_Top.size())
@@ -149,7 +149,7 @@ CFileScore::CPlayerScore *CFileScore::SearchScore(int ID, bool ScoreIP, int *pPo
 {
 	char aIP[16];
 	Server()->GetClientAddr(ID, aIP, sizeof(aIP));
-	
+
 	int Pos = 1;
 	for(sorted_array<CPlayerScore>::range r = m_Top.all(); !r.empty(); r.pop_front())
 	{
@@ -161,7 +161,7 @@ CFileScore::CPlayerScore *CFileScore::SearchScore(int ID, bool ScoreIP, int *pPo
 		}
 		Pos++;
 	}
-	
+
 	return SearchName(Server()->ClientName(ID), pPosition, 0);
 }
 
@@ -204,10 +204,10 @@ void CFileScore::LoadScore(int ClientID, bool PrintRank)
 	{
 		lock_wait(gs_ScoreLock);
 		str_copy(pPlayer->m_aIP, aIP, sizeof(pPlayer->m_aIP));
-		lock_release(gs_ScoreLock);
+		lock_unlock(gs_ScoreLock);
 		Save();
 	}
-	
+
 	// set score
 	if(pPlayer)
 		PlayerData(ClientID)->Set(pPlayer->m_Time, pPlayer->m_aCpTime);
@@ -236,7 +236,7 @@ void CFileScore::SaveScore(int ClientID, int Time, int *pCpTime, bool NewRecord)
 	else
 		m_Top.add(CPlayerScore(pName, PlayerData(ClientID)->m_Time, aIP, PlayerData(ClientID)->m_aCpTime));
 
-	lock_release(gs_ScoreLock);
+	lock_unlock(gs_ScoreLock);
 	Save();
 }
 
@@ -261,12 +261,12 @@ void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 	CPlayerScore *pScore;
 	int Pos;
 	char aBuf[512];
-	
+
 	if(!Search)
 		pScore = SearchScore(ClientID, 1, &Pos);
 	else
 		pScore = SearchName(pName, &Pos, 1);
-	
+
 	if(pScore && Pos > -1)
 	{
 		char aClientName[128];
@@ -286,6 +286,6 @@ void CFileScore::ShowRank(int ClientID, const char *pName, bool Search)
 		str_format(aBuf, sizeof(aBuf), "Several players were found.");
 	else
 		str_format(aBuf, sizeof(aBuf), "%s is not ranked", Search?pName:Server()->ClientName(ClientID));
-	
+
 	GameServer()->SendChatTarget(ClientID, aBuf);
 }

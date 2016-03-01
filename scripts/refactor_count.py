@@ -25,17 +25,17 @@ allowed_words += [ # system.h
 	"int64",
 	"dbg_assert", "dbg_msg", "dbg_break", "dbg_logger_stdout", "dbg_logger_debugger", "dbg_logger_file",
 	"mem_alloc", "mem_zero", "mem_free", "mem_copy", "mem_move", "mem_comp", "mem_stats", "total_allocations", "allocated",
-	"thread_create", "thread_sleep", "lock_wait", "lock_create", "lock_release", "lock_destroy", "swap_endian",
+	"thread_init", "thread_sleep", "lock_wait", "lock_create", "lock_unlock", "lock_destroy", "swap_endian",
 	"io_open", "io_read", "io_read", "io_write", "io_flush", "io_close", "io_seek", "io_skip", "io_tell", "io_length",
 	"str_comp", "str_length", "str_quickhash", "str_format", "str_copy", "str_comp_nocase", "str_sanitize", "str_append",
 	"str_comp_num", "str_find_nocase", "str_sanitize_strong", "str_uppercase", "str_toint", "str_tofloat",
 	"str_utf8_encode", "str_utf8_rewind", "str_utf8_forward", "str_utf8_decode", "str_sanitize_cc", "str_skip_whitespaces",
 	"fs_makedir", "fs_listdir", "fs_storage_path", "fs_is_dir",
-	"net_init", "net_addr_comp", "net_host_lookup", "net_addr_str", "type", "port", "net_addr_from_str", 
+	"net_init", "net_addr_comp", "net_host_lookup", "net_addr_str", "type", "port", "net_addr_from_str",
 	"net_udp_create", "net_udp_send", "net_udp_recv", "net_udp_close", "net_socket_read_wait",
 	"net_stats", "sent_bytes", "recv_bytes", "recv_packets", "sent_packets",
-	"time_get", "time_freq", "time_timestamp"] 
-	
+	"time_get", "time_freq", "time_timestamp"]
+
 allowed_words += ["vec2", "vec3", "vec4", "round", "clamp", "length", "dot", "normalize", "frandom", "mix", "distance", "min",
         "closest_point_on_line", "max", "absolute"] # math.hpp
 allowed_words += [  # tl
@@ -76,7 +76,7 @@ class IncludeChecker(Checker):
 				#	checker.Error("%s is not allowed" % include_file)
 			elif '"' in line:
 				include_file = line.split('"')[1]
-			
+
 			#print include_file
 			if include_file in self.disallowed_headers:
 				checker.Error("%s is not allowed" % include_file)
@@ -115,14 +115,14 @@ class FileChecker:
 		for c in self.checkers:
 			c.CheckLine(self, line)
 		return True
-	
+
 	def CheckFile(self, filename):
 		self.current_file = filename
 		self.current_line = 0
 		self.current_errors = []
 		for c in self.checkers:
 			c.CheckStart(self, filename)
-			
+
 		for line in file(filename).readlines():
 			self.current_line += 1
 			if "ignore_check" in line:
@@ -131,10 +131,10 @@ class FileChecker:
 
 		for c in self.checkers:
 			c.CheckEnd(self)
-	
+
 	def GetErrors(self):
 		return self.current_errors
-		
+
 def cstrip(lines):
 	d = ""
 	for l in lines:
@@ -148,9 +148,9 @@ def cstrip(lines):
 	d = d.replace("\t", " ") # tab to space
 	d = re.sub("  *", " ", d) # remove double spaces
 	#d = re.sub("", "", d) # remove /* */ comments
-	
+
 	d = d.strip()
-	
+
 	# this eats up cases like 'n {'
 	i = 1
 	while i < len(d)-2:
@@ -162,7 +162,7 @@ def cstrip(lines):
 
 #def stripstrings(data):
 #	return re.sub('\".*?\"', 'STRING', data)
-	
+
 def get_identifiers(data):
 	idents = {}
 	data = " "+data+" "
@@ -170,7 +170,7 @@ def get_identifiers(data):
 	start = 0
 	while 1:
 		m = regexp.search(data, start)
-		
+
 		if m == None:
 			break
 		start = m.end()-1
@@ -235,35 +235,35 @@ for (root,dirs,files) in os.walk("src"):
 			continue
 		if "src/game/variables.hpp" in filename: # ignore config files
 			continue
-			
+
 		if not (".hpp" in filename or ".h" in filename or ".cpp" in filename):
 			continue
-		
+
 		#total_files += 1
-		
+
 		#if not "src/engine/client/ec_client.cpp" in filename:
 		#	continue
-		
+
 		f = FileChecker()
 		f.CheckFile(filename)
 		num_errors = len(f.GetErrors())
 		total_errors += num_errors
-		
+
 		if num_errors:
 			print '<tr style="background: #e0e0e0"><td colspan="2">%s, %d errors</td></tr>' % (filename, num_errors),
 			for line, msg in f.GetErrors():
 				print '<tr"><td>%d</td><td>%s</td></tr>' % (line, msg)
 			#print '<table>'
 			#GetErrors()
-			
-		
-		
-		
+
+
+
+
 		if 0:
 			text = cstrip(file(filename).readlines()) # remove all preprocessor stuff and comments
 			#text = stripstrings(text) # remove strings (does not solve all cases however)
 			#print text
-			
+
 			idents = get_identifiers(text)
 			offenders = 0
 			total = 0
@@ -276,7 +276,7 @@ for (root,dirs,files) in os.walk("src"):
 					continue
 				if name in allowed_words: # skip allowed keywords
 					continue
-					
+
 				total += idents[name]
 				if name != name.lower(): # strip names that are not only lower case
 					continue
@@ -284,16 +284,16 @@ for (root,dirs,files) in os.walk("src"):
 				if not gen_html:
 					print "[%d] %s"%(idents[name], name)
 				offenders += idents[name]
-			
+
 			grand_total += total
 			grand_offenders += offenders
-			
+
 			if total == 0:
 				total = 1
-			
+
 			line_order = -line_order
-			
-			
+
+
 			done = int((1-(offenders / float(total))) * 100)
 			if done == 100:
 				complete_files += 1
@@ -308,20 +308,20 @@ for (root,dirs,files) in os.walk("src"):
 					color = "#e0ff80"
 				if done == 100:
 					color = "#80ff80"
-					
+
 				line_color = "#f0efd5"
 				if line_order > 0:
 					line_color = "#ffffff"
-				
+
 				offender_string = ""
 				count = 0
 				for name in offender_list:
 					count += 1
 					offender_string += "[%d]%s " % (offender_list[name], name)
-					
+
 					if count%5 == 0:
 						offender_string += "<br/>"
-					
+
 				print '<tr style="background: %s">' % line_color,
 				print '<td style="text-align: right; background: %s"><b>%d%%</b></td><td style="text-align: center">%d</td><td>%s</td>' % (color, done, offenders, filename),
 				print '<td style="text-align: right">%s</td>' % offender_string
@@ -330,10 +330,10 @@ for (root,dirs,files) in os.walk("src"):
 
 if gen_html:
 	print "</table>"
-	
+
 	print "<h1>%d errors</h1>" % total_errors
-	
-	
+
+
 	if 0:
 		print "<h1>%.1f%% Identifiers done</h1>" % ((1-(grand_offenders / float(grand_total))) * 100)
 		print "%d left of %d" % (grand_offenders, grand_total)
